@@ -52,7 +52,7 @@ class SimplfFunction implements SimplfCallable {
 
     @Override
     public String toString() {
-        return "<fn >";
+        return "<fn " + declaration.name.lexeme + ">";
     }
 
 }
