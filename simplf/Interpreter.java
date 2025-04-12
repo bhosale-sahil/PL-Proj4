@@ -8,9 +8,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
     public Environment globals = new Environment();
     private Environment environment = globals;
 
-    Interpreter() {
-
-    }
+    Interpreter() {}
 
     public void interpret(List<Stmt> stmts) {
         try {
@@ -24,7 +22,8 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
 
     @Override
     public Object visitExprStmt(Stmt.Expression stmt) {
-        return evaluate(stmt.expr);
+        evaluate(stmt.expr);
+        return null;
     }
 
     @Override
@@ -40,7 +39,6 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
         if (stmt.initializer != null) {
             value = evaluate(stmt.initializer);
         }
-
         environment = environment.define(stmt.name, stmt.name.lexeme, value);
         return null;
     }
@@ -49,7 +47,6 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
     public Object visitBlockStmt(Stmt.Block stmt) {
         Environment previous = environment;
         environment = new Environment(previous);
-
         try {
             for (Stmt s : stmt.statements) {
                 execute(s);
@@ -63,9 +60,9 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
     @Override
     public Object visitIfStmt(Stmt.If stmt) {
         if (isTruthy(evaluate(stmt.cond))) {
-            execute(stmt.thenBranch);
+            return execute(stmt.thenBranch);
         } else if (stmt.elseBranch != null) {
-            execute(stmt.elseBranch);
+            return execute(stmt.elseBranch);
         }
         return null;
     }
@@ -85,22 +82,26 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
 
     @Override
     public Object visitFunctionStmt(Stmt.Function stmt) {
-        SimplfFunction function = new SimplfFunction(stmt, null);
-
-        environment = environment.define(stmt.name, stmt.name.lexeme, function);
-
+        // Step 1: Define a placeholder (null value)
+        environment = environment.define(stmt.name, stmt.name.lexeme, null);
+    
+        // Step 2: Capture closure that includes the placeholder
+        SimplfFunction function = new SimplfFunction(stmt, environment);
+    
+        // Step 3: Assign actual function object back into the placeholder
+        environment.assign(stmt.name, function);
+    
         return null;
     }
+    
 
     @Override
     public Object visitLogicalExpr(Expr.Logical expr) {
         Object left = evaluate(expr.left);
         if (expr.op.type == TokenType.OR) {
-            if (isTruthy(left))
-                return left;
+            if (isTruthy(left)) return left;
         } else {
-            if (!isTruthy(left))
-                return left;
+            if (!isTruthy(left)) return left;
         }
         return evaluate(expr.right);
     }
@@ -188,22 +189,25 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
     @Override
     public Object visitCallExpr(Expr.Call expr) {
         Object callee = evaluate(expr.callee);
-
-        if (!(callee instanceof SimplfCallable)) {
-            throw new RuntimeError(expr.paren, "Can only call functions.");
-        }
-
         List<Object> arguments = new java.util.ArrayList<>();
         for (Expr argument : expr.args) {
             arguments.add(evaluate(argument));
         }
 
-        SimplfCallable function = (SimplfCallable) callee;
-        return function.call(this, arguments);
-    }
+        if (!(callee instanceof SimplfCallable)) {
+            throw new RuntimeError(expr.paren, "Can only call functions.");
+        }
 
-    private Object evaluate(Expr expr) {
-        return expr.accept(this);
+        SimplfCallable function = (SimplfCallable) callee;
+        if (function instanceof SimplfFunction) {
+            SimplfFunction func = (SimplfFunction) function;
+            if (arguments.size() != func.arity()) {
+                throw new RuntimeError(expr.paren,
+                        "Expected " + func.arity() + " arguments but got " + arguments.size() + ".");
+            }
+        }
+
+        return function.call(this, arguments);
     }
 
     @Override
@@ -222,41 +226,58 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
         }
     }
 
+    // ✅ Now public — for SimplfFunction use
+    public Object evaluate(Expr expr) {
+        return expr.accept(this);
+    }
+
+    public void executeInEnv(Stmt stmt, Environment env) {
+        Environment previous = this.environment;
+        try {
+            this.environment = env;
+            stmt.accept(this);
+        } finally {
+            this.environment = previous;
+        }
+    }
+
+    public Object evaluateInEnv(Expr expr, Environment env) {
+        Environment previous = this.environment;
+        try {
+            this.environment = env;
+            return expr.accept(this);
+        } finally {
+            this.environment = previous;
+        }
+    }
+
     private Object execute(Stmt stmt) {
         return stmt.accept(this);
     }
 
     private boolean isTruthy(Object object) {
-        if (object == null) {
-            return false;
-        }
-        if (object instanceof Boolean) {
-            return (boolean) object;
-        }
+        if (object == null) return false;
+        if (object instanceof Boolean) return (boolean) object;
         return true;
     }
 
     private boolean isEqual(Object a, Object b) {
-        if (a == null)
-            return b == null;
+        if (a == null) return b == null;
         return a.equals(b);
     }
 
     private void checkNumber(Token op, Object object) {
-        if (object instanceof Double)
-            return;
+        if (object instanceof Double) return;
         throw new RuntimeError(op, "Operand must be a number");
     }
 
     private void checkNumbers(Token op, Object a, Object b) {
-        if (a instanceof Double && b instanceof Double)
-            return;
+        if (a instanceof Double && b instanceof Double) return;
         throw new RuntimeError(op, "Operand must be numbers");
     }
 
     private String stringify(Object object) {
-        if (object == null)
-            return "nil";
+        if (object == null) return "nil";
         if (object instanceof Double) {
             String num = object.toString();
             if (num.endsWith(".0")) {
@@ -265,17 +286,5 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
             return num;
         }
         return object.toString();
-    }
-
-    public Environment getEnvironment() {
-        return this.environment;
-    }
-
-    public void setEnvironment(Environment env) {
-        this.environment = env;
-    }
-
-    public Object runInCurrentEnv(Stmt stmt) {
-        return execute(stmt);
     }
 }
