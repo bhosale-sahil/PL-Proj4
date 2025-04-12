@@ -81,29 +81,24 @@ public class Desugar implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt> {
 
     @Override
     public Stmt visitForStmt(For stmt) {
-        Stmt initializer = stmt.init == null
-                ? null
-                : new Stmt.Expression(stmt.init.accept(this));
-        Expr condition = stmt.cond.accept(this);
-        Stmt increment = stmt.incr == null
-                ? null
-                : new Stmt.Expression(stmt.incr.accept(this));
-        Stmt body = stmt.body.accept(this);
+        Stmt initStmt = new Var(new Token(TokenType.IDENTIFIER, "__for_init", null, 0, 0), null);
+        if (stmt.init != null) {
+            initStmt = new Stmt.Expression(stmt.init);
+        }
 
-        // Create body block: { body; increment; }
-        List<Stmt> whileBody = new ArrayList<>();
-        whileBody.add(body);
-        whileBody.add(increment);
+        Expr condition = stmt.cond != null ? stmt.cond : new Expr.Literal(true);
 
-        // Create while loop
-        Stmt whileStmt = new While(condition, new Block(whileBody));
+        Stmt body = stmt.body;
+        if (stmt.incr != null) {
+            body = new Block(List.of(
+                stmt.body,
+                new Stmt.Expression(stmt.incr)
+            ));
+        }
 
-        // Full block: { initializer; while (...) { ... } }
-        List<Stmt> fullBlock = new ArrayList<>();
-        fullBlock.add(initializer);
-        fullBlock.add(whileStmt);
+        Stmt loop = new While(condition, body);
 
-        return new Block(fullBlock);
+        return new Block(List.of(initStmt, loop));
     }
 
     @Override

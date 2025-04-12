@@ -24,8 +24,8 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
 
     @Override
     public Object visitExprStmt(Stmt.Expression stmt) {
-        evaluate(stmt.expr);
-        return null;
+        return evaluate(stmt.expr);
+        
         // throw new UnsupportedOperationException("TODO: implement statements");
     }
 
@@ -65,9 +65,9 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
     @Override
     public Object visitIfStmt(Stmt.If stmt) {
         if (isTruthy(evaluate(stmt.cond))) {
-            return execute(stmt.thenBranch);
+            execute(stmt.thenBranch);
         } else if (stmt.elseBranch != null) {
-            return execute(stmt.elseBranch);
+            execute(stmt.elseBranch);
         }
         return null;
         // throw new UnsupportedOperationException("TODO: implement statements");
@@ -89,7 +89,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
 
     @Override
     public Object visitFunctionStmt(Stmt.Function stmt) {
-        SimplfFunction function = new SimplfFunction(stmt, environment);
+        SimplfFunction function = new SimplfFunction(stmt, null);
         environment = environment.define(stmt.name, stmt.name.lexeme, function);
         return null;
         // throw new UnsupportedOperationException("TODO: implement statements");
@@ -193,24 +193,18 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
     @Override
     public Object visitCallExpr(Expr.Call expr) {
         Object callee = evaluate(expr.callee);
-        List<Object> arguments = new java.util.ArrayList<>();
-        for (Expr argument : expr.args) {
-            arguments.add(evaluate(argument));
-        }
+        
 
         if (!(callee instanceof SimplfCallable)) {
             throw new RuntimeError(expr.paren, "Can only call functions.");
         }
 
-        SimplfCallable function = (SimplfCallable) callee;
-        if (function instanceof SimplfFunction) {
-            SimplfFunction func = (SimplfFunction) function;
-            if (arguments.size() != func.arity()) {
-                throw new RuntimeError(expr.paren,
-                        "Expected " + func.arity() + " arguments but got " + arguments.size() + ".");
-            }
+        List<Object> arguments = new java.util.ArrayList<>();
+        for (Expr argument : expr.args) {
+            arguments.add(evaluate(argument));
         }
 
+        SimplfCallable function = (SimplfCallable) callee;
         return function.call(this, arguments);
         // throw new UnsupportedOperationException("TODO: implement function calls");
     }
@@ -279,6 +273,18 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
             return num;
         }
         return object.toString();
+    }
+
+    public Environment getEnvironment() {
+        return this.environment;
+    }
+
+    public void setEnvironment(Environment env) {
+        this.environment = env;
+    }
+
+    public Object runInCurrentEnv(Stmt stmt) {
+        return execute(stmt);
     }
 
 }

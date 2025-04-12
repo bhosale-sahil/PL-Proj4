@@ -1,5 +1,5 @@
 package simplf;
- 
+
 import java.util.List;
 
 class SimplfFunction implements SimplfCallable {
@@ -10,44 +10,38 @@ class SimplfFunction implements SimplfCallable {
     SimplfFunction(Stmt.Function declaration, Environment closure) {
         this.declaration = declaration;
         this.closure = closure;
-        // throw new UnsupportedOperationException("TODO: implement functions");
+
     }
 
     public void setClosure(Environment environment) {
         this.closure = environment;
-        // throw new UnsupportedOperationException("TODO: implement functions");
+
     }
 
-    public int arity() {
-        return declaration.params.size();  // ✅ Needed to fix the error
-    }
+    
 
     @Override
     public Object call(Interpreter interpreter, List<Object> args) {
-        Environment functionEnv = new Environment(closure);
+        Environment localEnv = new Environment(closure);
 
-        // Bind parameters
         for (int i = 0; i < declaration.params.size(); i++) {
-            functionEnv = functionEnv.define(
-                declaration.params.get(i),
-                declaration.params.get(i).lexeme,
-                args.get(i)
-            );
+            Token param = declaration.params.get(i);
+            localEnv = localEnv.define(param, param.lexeme, args.get(i));
         }
 
-        // Save previous environment and switch to function environment
-        Environment previous = interpreter.globals;
+        Environment previous = interpreter.getEnvironment();
+        interpreter.setEnvironment(localEnv);
+        Object result = null;
+
         try {
-            interpreter.globals = functionEnv;
             for (Stmt stmt : declaration.body) {
-                interpreter.interpret(List.of(stmt));
+                result = interpreter.runInCurrentEnv(stmt);
             }
         } finally {
-            interpreter.globals = previous;
+            interpreter.setEnvironment(previous);
         }
 
-        return null;
-        // throw new UnsupportedOperationException("TODO: implement functions");
+        return result;
     }
 
     @Override
