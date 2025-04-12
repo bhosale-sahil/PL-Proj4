@@ -25,8 +25,6 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
     @Override
     public Object visitExprStmt(Stmt.Expression stmt) {
         return evaluate(stmt.expr);
-        
-        // throw new UnsupportedOperationException("TODO: implement statements");
     }
 
     @Override
@@ -42,15 +40,16 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
         if (stmt.initializer != null) {
             value = evaluate(stmt.initializer);
         }
+
         environment = environment.define(stmt.name, stmt.name.lexeme, value);
         return null;
-        // throw new UnsupportedOperationException("TODO: implement statements");
     }
 
     @Override
     public Object visitBlockStmt(Stmt.Block stmt) {
         Environment previous = environment;
         environment = new Environment(previous);
+
         try {
             for (Stmt s : stmt.statements) {
                 execute(s);
@@ -59,7 +58,6 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
             environment = previous;
         }
         return null;
-        // throw new UnsupportedOperationException("TODO: implement statements");
     }
 
     @Override
@@ -70,7 +68,6 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
             execute(stmt.elseBranch);
         }
         return null;
-        // throw new UnsupportedOperationException("TODO: implement statements");
     }
 
     @Override
@@ -79,7 +76,6 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
             execute(stmt.body);
         }
         return null;
-        // throw new UnsupportedOperationException("TODO: implement statements");
     }
 
     @Override
@@ -90,9 +86,10 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
     @Override
     public Object visitFunctionStmt(Stmt.Function stmt) {
         SimplfFunction function = new SimplfFunction(stmt, null);
+
         environment = environment.define(stmt.name, stmt.name.lexeme, function);
+
         return null;
-        // throw new UnsupportedOperationException("TODO: implement statements");
     }
 
     @Override
@@ -186,14 +183,11 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
     @Override
     public Object visitVarExpr(Expr.Variable expr) {
         return environment.get(expr.name);
-        // throw new UnsupportedOperationException("TODO: implement variable
-        // references");
     }
 
     @Override
     public Object visitCallExpr(Expr.Call expr) {
         Object callee = evaluate(expr.callee);
-        
 
         if (!(callee instanceof SimplfCallable)) {
             throw new RuntimeError(expr.paren, "Can only call functions.");
@@ -206,7 +200,6 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
 
         SimplfCallable function = (SimplfCallable) callee;
         return function.call(this, arguments);
-        // throw new UnsupportedOperationException("TODO: implement function calls");
     }
 
     private Object evaluate(Expr expr) {
@@ -218,7 +211,6 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
         Object value = evaluate(expr.value);
         environment.assign(expr.name, value);
         return value;
-        // throw new UnsupportedOperationException("TODO: implement assignments");
     }
 
     @Override
@@ -286,5 +278,4 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
     public Object runInCurrentEnv(Stmt stmt) {
         return execute(stmt);
     }
-
 }

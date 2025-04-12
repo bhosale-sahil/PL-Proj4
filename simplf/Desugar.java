@@ -91,9 +91,8 @@ public class Desugar implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt> {
         Stmt body = stmt.body;
         if (stmt.incr != null) {
             body = new Block(List.of(
-                stmt.body,
-                new Stmt.Expression(stmt.incr)
-            ));
+                    stmt.body,
+                    new Stmt.Expression(stmt.incr)));
         }
 
         Stmt loop = new While(condition, body);

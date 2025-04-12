@@ -3,22 +3,17 @@ package simplf;
 import java.util.List;
 
 class SimplfFunction implements SimplfCallable {
-
     private final Stmt.Function declaration;
     private Environment closure;
 
     SimplfFunction(Stmt.Function declaration, Environment closure) {
         this.declaration = declaration;
         this.closure = closure;
-
     }
 
-    public void setClosure(Environment environment) {
-        this.closure = environment;
-
+    public void setClosure(Environment env) {
+        this.closure = env;
     }
-
-    
 
     @Override
     public Object call(Interpreter interpreter, List<Object> args) {
@@ -48,5 +43,4 @@ class SimplfFunction implements SimplfCallable {
     public String toString() {
         return "<fn " + declaration.name.lexeme + ">";
     }
-
 }
